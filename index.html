@@ -194,10 +194,21 @@
     <div class="container">
         <h1>Language Learning App</h1>
         
-        <div class="sheet-input">
-            <input type="text" id="sheetUrl" name="sheetUrl" placeholder="Enter published Google Sheet CSV URL" value="" autocomplete="url" data-form-type="other" aria-label="Google Sheet URL">
-            <button id="loadBtn">Load Data</button>
-        </div>
+        <!-- Start of the form wrapper -->
+        <form id="sheetForm" autocomplete="on">
+            <div class="sheet-input">
+            <label for="sheetUrl"style="display: block; margin-right: 8px;">Enter published CSV URL: </label>
+            <input type="url"
+                    id="sheetUrl"
+                    name="url"
+                    value=""
+                    autocomplete="url"
+                    data-form-type="other"
+                    aria-label="Google Sheet URL" />
+            <button id="loadBtn" type="submit">Load Data</button>
+            </div>
+        </form>
+        <!-- End of the form wrapper -->
         
         <div id="errorMsg"></div>
         
@@ -824,7 +835,7 @@
         });
         
         // Initialize with sample data URL for CSV
-        sheetUrl.value = "https://docs.google.com/spreadsheets/d/e/2PACX-YourPublishedSheetID/pub?output=csv";
+        sheetUrl.value = "";
     </script>
 </body>
 </html>
