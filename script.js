@@ -1,4 +1,4 @@
-        // Global variables
+// Global variables
         let wordsData = [];
         let currentIndex = 0;
         let playing = false;
@@ -521,3 +521,35 @@
         
         // Initialize with sample data URL for CSV
         sheetUrl.value = "";
+
+document.getElementById("sheetForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    const sheetUrl = document.getElementById("sheetUrl").value;
+    const proxyUrl = "https://api.allorigins.win/get?url=";
+    const fullUrl = proxyUrl + encodeURIComponent(sheetUrl);
+
+    fetch(fullUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error("Network response was not ok");
+            }
+            return response.json();
+        })
+        .then(data => {
+            const csvContent = data.contents;
+            Papa.parse(csvContent, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function (results) {
+                    console.log("Parsed data:", results.data);
+                    // Process the data...
+                },
+                error: function (error) {
+                    console.error("Papa Parse error:", error);
+                }
+            });
+        })
+        .catch(error => {
+            console.error("Fetch error:", error);
+        });
+});
