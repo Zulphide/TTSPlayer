@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Learning App</title>
+    <!-- Add PapaParse for better CSV handling -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            margin-right: 15px;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        input[type="number"], select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 100px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button#pauseBtn {
+            background-color: #f39c12;
+        }
+        button#pauseBtn:hover {
+            background-color: #e67e22;
+        }
+        button#stopBtn {
+            background-color: #e74c3c;
+        }
+        button#stopBtn:hover {
+            background-color: #c0392b;
+        }
+        .word-display {
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            background-color: #e8f4f8;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .word-info {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            margin-bottom: 15px;
+        }
+        .word-item {
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin: 5px;
+            min-width: 150px;
+            background-color: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .word-item h3 {
+            margin-top: 0;
+            color: #3498db;
+            font-size: 16px;
+        }
+        .word-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .sentences {
+            margin-top: 20px;
+        }
+        .sentence {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 8px 0;
+            background-color: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .sentence h3 {
+            margin-top: 0;
+            color: #3498db;
+            font-size: 16px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .sentence p {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #ddd;
+            border-radius: 4px;
+            margin: 15px 0;
+            height: 10px;
+        }
+        .progress-bar {
+            height: 10px;
+            background-color: #4CAF50;
+            width: 0%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        .status {
+            text-align: center;
+            margin: 10px 0;
+            font-style: italic;
+            color: #7f8c8d;
+        }
+        .language-checkbox {
+            margin-right: 10px;
+        }
+        #errorMsg {
+            color: #e74c3c;
+            text-align: center;
+            margin: 10px 0;
+        }
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .sheet-input {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            justify-content: center;
+        }
+        #sheetUrl {
+            flex: 1;
+            max-width: 600px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        .current-word-indicator {
+            background-color: #3498db;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Language Learning App</h1>
+        
+        <div class="sheet-input">
+            <input type="text" id="sheetUrl" name="sheetUrl" placeholder="Enter published Google Sheet CSV URL" value="" autocomplete="url" data-form-type="other" aria-label="Google Sheet URL">
+            <button id="loadBtn">Load Data</button>
+        </div>
+        
+        <div id="errorMsg"></div>
+        
+        <div class="controls">
+            <div class="controls-row">
+                <div class="control-group">
+                    <label for="speedControl">Playback Speed:</label>
+                    <input type="number" id="speedControl" min="0.5" max="2" step="0.1" value="1">
+                </div>
+                
+                <div class="control-group">
+                    <label for="pauseDelay">Pause Delay (ms):</label>
+                    <input type="number" id="pauseDelay" min="500" max="5000" step="100" value="1000">
+                </div>
+                
+                <div class="control-group">
+                    <label for="currentWord">Current Word:</label>
+                    <input type="number" id="currentWord" min="1" value="1">
+                </div>
+            </div>
+            
+            <div class="controls-row">
+                <div class="control-group">
+                    <label>Languages to Play:</label>
+                    <div>
+                        <input type="checkbox" id="playEnglish" class="language-checkbox" checked>
+                        <label for="playEnglish">English</label>
+                        
+                        <input type="checkbox" id="playChinese" class="language-checkbox" checked>
+                        <label for="playChinese">Chinese</label>
+                        
+                        <input type="checkbox" id="playSpanish" class="language-checkbox" checked>
+                        <label for="playSpanish">Spanish</label>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label>Playback Mode:</label>
+                    <div>
+                        <input type="checkbox" id="playAllWords" class="language-checkbox" checked>
+                        <label for="playAllWords">Auto-play all words</label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls-row">
+                <button id="playBtn">Play</button>
+                <button id="pauseBtn">Pause</button>
+                <button id="stopBtn">Stop</button>
+                <button id="prevBtn">Previous</button>
+                <button id="nextBtn">Next</button>
+            </div>
+        </div>
+        
+        <div class="progress-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div class="status" id="status">Ready to play</div>
+        
+        <div class="word-display">
+            <div class="current-word-indicator" id="wordCounter">Word 0 of 0</div>
+            
+            <div class="word-info">
+                <div class="word-item">
+                    <h3>English</h3>
+                    <div class="word-value" id="wordEn"></div>
+                </div>
+                <div class="word-item">
+                    <h3>Chinese</h3>
+                    <div class="word-value" id="wordCn"></div>
+                </div>
+                <div class="word-item">
+                    <h3>Pinyin</h3>
+                    <div class="word-value" id="wordPinyin"></div>
+                </div>
+                <div class="word-item">
+                    <h3>Tone</h3>
+                    <div class="word-value" id="wordTone"></div>
+                </div>
+            </div>
+            
+            <div class="sentences">
+                <div class="sentence">
+                    <h3>English Sentence</h3>
+                    <p id="sentenceEn"></p>
+                </div>
+                <div class="sentence">
+                    <h3>Chinese Sentence</h3>
+                    <p id="sentenceCn"></p>
+                </div>
+                <div class="sentence">
+                    <h3>Pinyin Sentence</h3>
+                    <p id="sentencePinyin"></p>
+                </div>
+                <div class="sentence">
+                    <h3>Spanish Sentence</h3>
+                    <p id="sentenceSp"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let wordsData = [];
+        let currentIndex = 0;
+        let playing = false;
+        let paused = false;
+        let synth = window.speechSynthesis;
+        let currentUtterance = null;
+        let playbackQueue = [];
+        let isProcessingQueue = false;
+        let autoPlayAllWords = true;
+
+        // DOM Elements
+        const loadBtn = document.getElementById('loadBtn');
+        const sheetUrl = document.getElementById('sheetUrl');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const speedControl = document.getElementById('speedControl');
+        const pauseDelay = document.getElementById('pauseDelay');
+        const currentWordInput = document.getElementById('currentWord');
+        const progressBar = document.getElementById('progressBar');
+        const status = document.getElementById('status');
+        const errorMsg = document.getElementById('errorMsg');
+        const wordCounter = document.getElementById('wordCounter');
+        const playAllWords = document.getElementById('playAllWords');
+        
+        // Language checkboxes
+        const playEnglish = document.getElementById('playEnglish');
+        const playChinese = document.getElementById('playChinese');
+        const playSpanish = document.getElementById('playSpanish');
+
+        // Word display elements
+        const wordEn = document.getElementById('wordEn');
+        const wordCn = document.getElementById('wordCn');
+        const wordPinyin = document.getElementById('wordPinyin');
+        const wordTone = document.getElementById('wordTone');
+        const sentenceEn = document.getElementById('sentenceEn');
+        const sentenceCn = document.getElementById('sentenceCn');
+        const sentencePinyin = document.getElementById('sentencePinyin');
+        const sentenceSp = document.getElementById('sentenceSp');
+
+        // Function to parse CSV data
+        function parseCSV(csv) {
+            const lines = csv.split('\n');
+            const result = [];
+            const headers = lines[0].split(',').map(header => header.trim().replace(/^"|"$/g, ''));
+
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                // Handle commas within quotes correctly
+                const values = [];
+                let currentValue = '';
+                let insideQuotes = false;
+                
+                for (let char of lines[i]) {
+                    if (char === '"') {
+                        insideQuotes = !insideQuotes;
+                    } else if (char === ',' && !insideQuotes) {
+                        values.push(currentValue.replace(/^"|"$/g, ''));
+                        currentValue = '';
+                    } else {
+                        currentValue += char;
+                    }
+                }
+                values.push(currentValue.replace(/^"|"$/g, ''));
+                
+                const obj = {};
+                headers.forEach((header, index) => {
+                    obj[header] = values[index] || '';
+                });
+                result.push(obj);
+            }
+            return result;
+        }
+
+        // Add Papa Parse loading mechanism (which has better CORS handling)
+        function loadWithPapaParse(url) {
+            status.textContent = 'Loading with Papa Parse...';
+            
+            // Check if we need to use a proxy
+            let fetchUrl = url;
+            
+            // If Papa Parse alone doesn't work due to CORS, try these alternative proxies
+            if (!url.includes('cors-anywhere') && !url.includes('corsproxy.io')) {
+                // Create backup URLs with different proxies for fallback
+                const proxies = [
+                    url, // Try direct first
+                    'https://corsproxy.io/?' + encodeURIComponent(url),
+                    'https://api.allorigins.win/raw?url=' + encodeURIComponent(url)
+                ];
+                
+                // Try each proxy in sequence until one works
+                tryNextProxy(proxies, 0);
+                return;
+            }
+            
+            // If URL already includes a proxy, just try to parse it
+            Papa.parse(fetchUrl, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.data && results.data.length > 0) {
+                        wordsData = results.data;
+                        updateUI();
+                        currentWordInput.max = wordsData.length;
+                        updateProgress();
+                        status.textContent = `Loaded ${wordsData.length} words`;
+                        errorMsg.textContent = '';
+                    } else {
+                        displayError("No data found in the sheet");
+                    }
+                },
+                error: function(error) {
+                    displayError(`Papa Parse error: ${error}`);
+                    console.error('Papa Parse error:', error);
+                }
+            });
+        }
+        
+        // Try loading with different proxies until one works
+        function tryNextProxy(proxies, index) {
+            if (index >= proxies.length) {
+                displayError("Failed to load data with all available methods");
+                return;
+            }
+            
+            status.textContent = `Trying loading method ${index + 1}...`;
+            
+            Papa.parse(proxies[index], {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (results.data && results.data.length > 0) {
+                        wordsData = results.data;
+                        updateUI();
+                        currentWordInput.max = wordsData.length;
+                        updateProgress();
+                        status.textContent = `Loaded ${wordsData.length} words successfully`;
+                        errorMsg.textContent = '';
+                    } else {
+                        // Try next proxy
+                        tryNextProxy(proxies, index + 1);
+                    }
+                },
+                error: function(error) {
+                    console.error(`Proxy ${index + 1} failed:`, error);
+                    // Try next proxy
+                    tryNextProxy(proxies, index + 1);
+                }
+            });
+        }
+
+        // Function to load data from Google Sheets
+        function loadSheetData(url) {
+            // Check if URL is already a published CSV URL
+            let fetchUrl = url;
+            
+            // If it's a standard Google Sheets URL, convert to export URL
+            if (url.includes('/d/') || url.includes('spreadsheets')) {
+                // Extract the sheet ID from the URL
+                let sheetId;
+                if (url.includes('/d/')) {
+                    sheetId = url.split('/d/')[1].split('/')[0];
+                } else if (url.includes('key=')) {
+                    sheetId = url.split('key=')[1].split('&')[0];
+                } else {
+                    displayError("Invalid Google Sheet URL");
+                    return;
+                }
+                
+                // Construct the export URL
+                fetchUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+            }
+            
+            // Use CORS proxy to avoid cross-origin issues
+            const corsProxyUrl = 'https://corsproxy.io/?';
+            const proxyFetchUrl = corsProxyUrl + encodeURIComponent(fetchUrl);
+            
+            status.textContent = 'Loading data through CORS proxy...';
+            
+            fetch(proxyFetchUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Failed to load sheet data: ${response.status}`);
+                    }
+                    return response.text();
+                })
+                .then(csv => {
+                    try {
+                        wordsData = parseCSV(csv);
+                        
+                        if (wordsData.length > 0) {
+                            updateUI();
+                            currentWordInput.max = wordsData.length;
+                            updateProgress();
+                            status.textContent = `Loaded ${wordsData.length} words`;
+                            errorMsg.textContent = '';
+                        } else {
+                            displayError("No data found in the sheet");
+                        }
+                    } catch (e) {
+                        displayError(`Error parsing data: ${e.message}`);
+                    }
+                })
+                .catch(error => {
+                    displayError(`Error: ${error.message}`);
+                    console.error('Error loading sheet data:', error);
+                    // Try with Papa Parse as a fallback
+                    loadWithPapaParse(url);
+                });
+        }
+
+        function displayError(message) {
+            errorMsg.textContent = message;
+            status.textContent = 'Error loading data';
+        }
+
+        // Update the display with current word data
+        function updateUI() {
+            if (wordsData.length === 0) return;
+            
+            const currentWord = wordsData[currentIndex];
+            
+            // Update word info
+            wordEn.textContent = currentWord['Word EN'] || '';
+            wordCn.textContent = currentWord['Word CN'] || '';
+            wordPinyin.textContent = currentWord['Word PinYin'] || '';
+            wordTone.textContent = currentWord['Word Tone'] || '';
+            
+            // Update sentences
+            sentenceEn.textContent = currentWord['English Sentence'] || '';
+            sentenceCn.textContent = currentWord['Chinese Sentence'] || '';
+            sentencePinyin.textContent = currentWord['PinYin Sentence'] || '';
+            sentenceSp.textContent = currentWord['Spanish Sentence'] || '';
+            
+            // Update counter and input
+            wordCounter.textContent = `Word ${currentIndex + 1} of ${wordsData.length}`;
+            currentWordInput.value = currentIndex + 1;
+            
+            updateProgress();
+        }
+
+        // Update the progress bar
+        function updateProgress() {
+            const progress = ((currentIndex + 1) / wordsData.length) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+
+        // Play TTS for text in specified language
+        function speak(text, lang, callback) {
+            if (!text) {
+                if (callback) callback();
+                return;
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang;
+            utterance.rate = parseFloat(speedControl.value);
+            
+            currentUtterance = utterance;
+            
+            utterance.onend = function() {
+                currentUtterance = null;
+                if (callback) callback();
+            };
+            
+            utterance.onerror = function() {
+                console.error(`TTS error for language: ${lang}`);
+                currentUtterance = null;
+                if (callback) callback();
+            };
+            
+            synth.speak(utterance);
+        }
+
+        // Process the playback queue
+        function processQueue() {
+            if (isProcessingQueue || playbackQueue.length === 0 || paused) return;
+            
+            isProcessingQueue = true;
+            const item = playbackQueue.shift();
+            
+            if (item.type === 'speak') {
+                status.textContent = `Speaking: ${item.text.substring(0, 30)}... (${item.language})`;
+                speak(item.text, item.language, () => {
+                    setTimeout(() => {
+                        isProcessingQueue = false;
+                        processQueue();
+                    }, parseInt(pauseDelay.value));
+                });
+            } else if (item.type === 'action') {
+                item.action();
+                setTimeout(() => {
+                    isProcessingQueue = false;
+                    processQueue();
+                }, parseInt(pauseDelay.value));
+            }
+        }
+
+        // Queue TTS item
+        function queueTTS(text, language) {
+            playbackQueue.push({
+                type: 'speak',
+                text: text,
+                language: language
+            });
+            
+            if (!isProcessingQueue) {
+                processQueue();
+            }
+        }
+
+        // Queue an action
+        function queueAction(action) {
+            playbackQueue.push({
+                type: 'action',
+                action: action
+            });
+            
+            if (!isProcessingQueue) {
+                processQueue();
+            }
+        }
+
+        // Play the current word sequence
+        function playCurrentWord() {
+            if (wordsData.length === 0) {
+                status.textContent = 'No data loaded';
+                return;
+            }
+            
+            const currentWord = wordsData[currentIndex];
+            
+            // Clear any existing queue
+            playbackQueue = [];
+            
+            // Add items to queue based on selected languages
+            // Read "Word EN", "Word CN", "Word Tone" in English
+            if (playEnglish.checked) {
+                queueTTS(currentWord['Word EN'] || '', 'en-US');
+            }
+            
+            if (playChinese.checked) {
+                queueTTS(currentWord['Word CN'] || '', 'zh-CN');
+            }
+            
+            queueTTS(`Tone: ${currentWord['Word Tone'] || ''}`, 'en-US');
+            
+            // Read "Word CN" again in Chinese
+            if (playChinese.checked) {
+                queueTTS(currentWord['Word CN'] || '', 'zh-CN');
+            }
+            
+            // Read sentences
+            if (playEnglish.checked) {
+                queueTTS(currentWord['English Sentence'] || '', 'en-US');
+            }
+            
+            if (playChinese.checked) {
+                queueTTS(currentWord['Chinese Sentence'] || '', 'zh-CN');
+            }
+            
+            if (playSpanish.checked) {
+                queueTTS(currentWord['Spanish Sentence'] || '', 'es-mx');
+            }
+            
+            // Move to next word after completion if still playing and auto-play is enabled
+            queueAction(() => {
+                if (playing && !paused && autoPlayAllWords && currentIndex < wordsData.length - 1) {
+                    currentIndex++;
+                    updateUI();
+                    playCurrentWord();
+                } else if (playing && !paused && (currentIndex >= wordsData.length - 1 || !autoPlayAllWords)) {
+                    // Reached end of list or auto-play is disabled
+                    if (!autoPlayAllWords) {
+                        status.textContent = 'Current word playback completed';
+                    } else {
+                        status.textContent = 'All words playback completed';
+                        playing = false;
+                    }
+                }
+            });
+        }
+
+        // Play button click handler
+        playBtn.addEventListener('click', () => {
+            if (wordsData.length === 0) {
+                status.textContent = 'No data loaded';
+                return;
+            }
+            
+            playing = true;
+            paused = false;
+            status.textContent = 'Playing...';
+            
+            // If paused, resume the queue processing
+            if (isProcessingQueue) {
+                if (currentUtterance) {
+                    synth.resume();
+                }
+                processQueue();
+            } else {
+                // Start fresh playback
+                playCurrentWord();
+            }
+        });
+
+        // Pause button click handler
+        pauseBtn.addEventListener('click', () => {
+            if (playing) {
+                paused = !paused;
+                
+                if (paused) {
+                    status.textContent = 'Paused';
+                    if (currentUtterance) {
+                        synth.pause();
+                    }
+                } else {
+                    status.textContent = 'Resuming...';
+                    if (currentUtterance) {
+                        synth.resume();
+                    }
+                    processQueue();
+                }
+            }
+        });
+
+        // Stop button click handler
+        stopBtn.addEventListener('click', () => {
+            playing = false;
+            paused = false;
+            playbackQueue = [];
+            synth.cancel();
+            status.textContent = 'Stopped';
+            isProcessingQueue = false;
+            currentUtterance = null;
+        });
+
+        // Previous button click handler
+        prevBtn.addEventListener('click', () => {
+            if (currentIndex > 0) {
+                currentIndex--;
+                updateUI();
+                
+                if (playing) {
+                    stopBtn.click();
+                    setTimeout(() => {
+                        playBtn.click();
+                    }, 100);
+                }
+            }
+        });
+
+        // Next button click handler
+        nextBtn.addEventListener('click', () => {
+            if (currentIndex < wordsData.length - 1) {
+                currentIndex++;
+                updateUI();
+                
+                if (playing) {
+                    stopBtn.click();
+                    setTimeout(() => {
+                        playBtn.click();
+                    }, 100);
+                }
+            }
+        });
+
+        // Current word input change handler
+        currentWordInput.addEventListener('change', () => {
+            const newIndex = parseInt(currentWordInput.value) - 1;
+            
+            if (newIndex >= 0 && newIndex < wordsData.length) {
+                currentIndex = newIndex;
+                updateUI();
+                
+                if (playing) {
+                    stopBtn.click();
+                    setTimeout(() => {
+                        playBtn.click();
+                    }, 100);
+                }
+            }
+        });
+
+        // Load button click handler
+        loadBtn.addEventListener('click', () => {
+            const url = sheetUrl.value.trim();
+            
+            if (url) {
+                status.textContent = 'Loading data...';
+                // Try PapaParse first which has better CORS handling
+                loadWithPapaParse(url);
+            } else {
+                displayError('Please enter a Google Sheet CSV URL');
+            }
+        });
+
+        // Check if speech synthesis is available
+        if (!window.speechSynthesis) {
+            displayError('Speech synthesis is not supported in your browser');
+            playBtn.disabled = true;
+            pauseBtn.disabled = true;
+            stopBtn.disabled = true;
+        }
+
+        // Set up event listener for auto-play toggle
+        playAllWords.addEventListener('change', () => {
+            autoPlayAllWords = playAllWords.checked;
+            if (autoPlayAllWords) {
+                status.textContent = 'Auto-play all words enabled';
+            } else {
+                status.textContent = 'Playing current word only';
+            }
+        });
+        
+        // Initialize with sample data URL for CSV
+        sheetUrl.value = "https://docs.google.com/spreadsheets/d/e/2PACX-YourPublishedSheetID/pub?output=csv";
+    </script>
+</body>
+</html>
