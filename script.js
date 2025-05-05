@@ -525,10 +525,10 @@
 document.getElementById("sheetForm").addEventListener("submit", function (e) {
     e.preventDefault();
     const sheetUrl = document.getElementById("sheetUrl").value;
-    const proxyUrl = "https://api.allorigins.win/get?url=";
-    const fullUrl = proxyUrl + encodeURIComponent(sheetUrl);
+    const proxyUrl = "https://corsproxy.io/?";
+    const fullUrl = proxyUrl + encodeURIComponent(sheetUrl);    
 
-    fetch(fullUrl)
+    fetch(sheetUrl)
         .then(response => {
             if (!response.ok) {
                 throw new Error("Network response was not ok");
@@ -551,5 +551,6 @@ document.getElementById("sheetForm").addEventListener("submit", function (e) {
         })
         .catch(error => {
             console.error("Fetch error:", error);
+            console.log("Requesting:", fullUrl);
         });
 });
