@@ -333,59 +333,60 @@
                 status.textContent = 'No data loaded';
                 return;
             }
-            
+
             const currentWord = wordsData[currentIndex];
-            
+
             // Clear any existing queue
             playbackQueue = [];
-            
+
             // Add items to queue based on selected languages
-            // Read "Word EN", "Word CN", "Word Tone" in English
             if (playEnglish.checked) {
                 queueTTS(currentWord['Word EN'] || '', 'en-US');
             }
-            
+
             if (playChinese.checked) {
                 queueTTS(currentWord['Word CN'] || '', 'zh-CN');
             }
-            
+
             queueTTS(`Tone: ${currentWord['Word Tone'] || ''}`, 'en-US');
-            
-            // Read "Word CN" again in Chinese
+
             if (playChinese.checked) {
                 queueTTS(currentWord['Word CN'] || '', 'zh-CN');
             }
-            
-            // Read sentences
+
             if (playEnglish.checked) {
                 queueTTS(currentWord['English Sentence'] || '', 'en-US');
             }
-            
+
             if (playChinese.checked) {
                 queueTTS(currentWord['Chinese Sentence'] || '', 'zh-CN');
             }
-            
+
             if (playSpanish.checked) {
                 queueTTS(currentWord['Spanish Sentence'] || '', 'es-mx');
             }
-            
-            // Move to next word after completion if still playing and auto-play is enabled
-            queueAction(() => {
-                if (playing && !paused && autoPlayAllWords && currentIndex < wordsData.length - 1) {
+
+            // Move to the next word or stop based on autoPlayAllWords
+    queueAction(() => {
+        if (playing && !paused) {
+            if (autoPlayAllWords) {
+                // Auto-play all words: move to the next word or loop back
+                if (currentIndex < wordsData.length - 1) {
                     currentIndex++;
-                    updateUI();
-                    playCurrentWord();
-                } else if (playing && !paused && (currentIndex >= wordsData.length - 1 || !autoPlayAllWords)) {
-                    // Reached end of list or auto-play is disabled
-                    if (!autoPlayAllWords) {
-                        status.textContent = 'Current word playback completed';
-                    } else {
-                        status.textContent = 'All words playback completed';
-                        playing = false;
-                    }
+                } else {
+                    // Loop back to the beginning
+                    currentIndex = 0;
                 }
-            });
+                updateUI();
+                playCurrentWord();
+            } else {
+                // Auto-play is off: only play the current word
+                status.textContent = 'Playing current word only';
+                playing = false; // Stop playback after the current word
+            }
         }
+    });
+}
 
         // Play button click handler
         playBtn.addEventListener('click', () => {
