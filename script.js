@@ -8,6 +8,8 @@
         let playbackQueue = [];
         let isProcessingQueue = false;
         let autoPlayAllWords = true;
+        // Wake Lock API variables and functions
+        let wakeLock = null;
 
         // DOM Elements
         const loadBtn = document.getElementById('loadBtn');
@@ -40,6 +42,37 @@
         const sentenceCn = document.getElementById('sentenceCn');
         const sentencePinyin = document.getElementById('sentencePinyin');
         const sentenceSp = document.getElementById('sentenceSp');
+
+        // Request a wake lock
+        async function requestWakeLock() {
+            // Check if Wake Lock API is supported and update the status
+            if ('wakeLock' in navigator) {
+                console.log('Wake Lock API is supported.');
+                status.textContent = 'Wake Lock is supported on your device.';
+            } else {
+                console.warn('Wake Lock API is not supported in this browser.');
+                status.textContent = 'Wake Lock is not supported on your device.';
+            }
+            
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log('Wake lock is active');
+                wakeLock.addEventListener('release', () => {
+                    console.log('Wake lock was released');
+                });
+            } catch (err) {
+                console.error(`Failed to acquire wake lock: ${err.message}`);
+            }
+        }
+
+        // Release the wake lock
+        function releaseWakeLock() {
+            if (wakeLock) {
+                wakeLock.release();
+                wakeLock = null;
+                console.log('Wake lock released');
+            }
+        }
 
         // Function to parse CSV data
         function parseCSV(csv) {
@@ -394,11 +427,16 @@
                 status.textContent = 'No data loaded';
                 return;
             }
-            
+        
             playing = true;
             paused = false;
             status.textContent = 'Playing...';
-            
+        
+            // Request wake lock
+            if ('wakeLock' in navigator) {
+                requestWakeLock();
+            }
+        
             // If paused, resume the queue processing
             if (isProcessingQueue) {
                 if (currentUtterance) {
@@ -440,6 +478,9 @@
             status.textContent = 'Stopped';
             isProcessingQueue = false;
             currentUtterance = null;
+        
+            // Release wake lock
+            releaseWakeLock();
         });
 
         // Previous button click handler
